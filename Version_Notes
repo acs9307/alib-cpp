@@ -1,0 +1,19 @@
+---Version 1.0.0---
+
+JsonStreamWriter:
+	NEW!
+
+ReferenceCounter:
+	NEW!
+
+ScrollingBuffer:
+	NEW!
+
+Task:
+	NEW!
+
+TaskPool:
+	NEW!
+
+Timer:
+	NEW!
