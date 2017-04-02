@@ -1,3 +1,19 @@
+---Version 1.1.0---
+comm/Msg:
+	NEW!	
+
+comm/MsgWrapper:
+	NEW!
+
+comm/RF24TP:
+	NEW!
+
+comm/RF24TPPacket:
+	NEW!
+
+sensor/USRange:
+	NEW!
+	
 ---Version 1.0.0---
 
 JsonStreamWriter:

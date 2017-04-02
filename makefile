@@ -5,13 +5,20 @@ alibcpp:
 	g++ -c Task.cpp -std=c++11
 	g++ -c TaskPool.cpp -std=c++11
 	g++ -c Timer.cpp -std=c++11
+	g++ -c comm/RF24TP.cpp
+	g++ -c comm/RF24TPPacket.cpp
+	g++ -c sensor/USRange.cpp
 	ar -rc libalibcpp.a *.o
 	rm -r *.o *.cpp
 
+uninstall:
+	rm /usr/local/lib/libalibcpp.a
+	rm -fr /usr/local/include/alib-cpp/
+	
 install:
-	mkdir -p /usr/local/include/alib-cpp/
-	rm -f /usr/local/include/alib-cpp/*.h
-	cp ./includes/*.h /usr/local/include/alib-cpp/
+	make uninstall
+	mkdir -p /usr/local/include/alib-cpp/	
+	cp -r ./includes/* /usr/local/include/alib-cpp/
 	cp libalibcpp.a /usr/local/lib/
 
 all:
@@ -25,6 +32,9 @@ arduino:
 	cp source/Task.cpp .
 	cp source/TaskPool.cpp .
 	cp source/Timer.cpp .
+	cp source/comm/RF24TP.cpp comm-RF24TP.cpp
+	cp source/comm/RF24TPPacket.cpp comm-RF24TPPacket.cpp
+	cp source/sensor/USRange.cpp sensor-USRange.cpp
 
 clean:
-	rm -rf *.o *.cpp *.a
+	rm -rf *.o *.cpp *.a comm/ sensor/

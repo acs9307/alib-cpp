@@ -31,3 +31,5 @@
 # Arduino Source
 *.cpp
 !source/*.cpp
+!source/comm/*.cpp
+!source/sensor/*.cpp
