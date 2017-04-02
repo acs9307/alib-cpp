@@ -5,9 +5,9 @@ alibcpp:
 	g++ -c Task.cpp -std=c++11
 	g++ -c TaskPool.cpp -std=c++11
 	g++ -c Timer.cpp -std=c++11
-	g++ -c comm/RF24TP.cpp
-	g++ -c comm/RF24TPPacket.cpp
-	g++ -c sensor/USRange.cpp
+	g++ -c comm/RF24TP.cpp -std=c++11
+	g++ -c comm/RF24TPPacket.cpp -std=c++11
+	g++ -c sensor/USRange.cpp -std=c++11
 	ar -rc libalibcpp.a *.o
 	rm -r *.o *.cpp
 

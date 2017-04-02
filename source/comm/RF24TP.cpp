@@ -1,4 +1,8 @@
+#ifdef ARDUINO
 #include "includes/comm/RF24TP.h"
+#else
+#include "../includes/comm/RF24TP.h"
+#endif
 
 namespace alib
 {

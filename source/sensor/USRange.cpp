@@ -1,4 +1,8 @@
+#ifdef ARDUINO
 #include "includes/sensor/USRange.h"
+#else
+#include "../includes/sensor/USRange.h"
+#endif
 
 namespace alib
 {

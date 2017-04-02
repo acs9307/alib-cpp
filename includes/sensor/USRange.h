@@ -1,14 +1,14 @@
 #ifndef USRANGE_IS_DEFINED
 #define USRANGE_IS_DEFINED
 
-#include <Arduino.h>
-#include <limits.h>
-
 #ifdef ARDUINO
+#include <Arduino.h>
 #include <alib-c/includes/alib_error.h>
 #else
 #include <alib-c/alib_error.h>
 #endif
+
+#include <limits.h>
 
 namespace alib
 {
