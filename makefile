@@ -5,14 +5,14 @@ alibcpp:
 	g++ -c Task.cpp -std=c++11
 	g++ -c TaskPool.cpp -std=c++11
 	g++ -c Timer.cpp -std=c++11
-	g++ -c comm/RF24TP.cpp -std=c++11
-	g++ -c comm/RF24TPPacket.cpp -std=c++11
-	g++ -c sensor/USRange.cpp -std=c++11
+#	g++ -c comm/RF24TP.cpp -std=c++11
+#	g++ -c comm/RF24TPPacket.cpp -std=c++11
+#	g++ -c sensor/USRange.cpp -std=c++11
 	ar -rc libalibcpp.a *.o
-	rm -r *.o *.cpp
+	rm -r *.o *.cpp comm/ sensor/
 
 uninstall:
-	rm /usr/local/lib/libalibcpp.a
+	rm -f /usr/local/lib/libalibcpp.a
 	rm -fr /usr/local/include/alib-cpp/
 	
 install:

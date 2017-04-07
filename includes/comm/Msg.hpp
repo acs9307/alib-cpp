@@ -19,17 +19,18 @@ namespace alib
 		* objects.  Use this to generalize messages. */
 		class IMsg
 		{
-		protected:
-			/* Would it be useful for users to have these public??? */
+		public:
 			/* Due to MsgWrapper design, we can't utilize a constructor for 
 			 * this class, so any constructors building from binary arrays
 			 * should simply call this function. */
-			virtual void _copyBuff(const uint8_t* data) = 0;
-			virtual void _copyBuff(const uint8_t* data, size_t dataLen) = 0;
-		public:
+			virtual void copyBuff(const uint8_t* data) = 0;
+			virtual void copyBuff(const uint8_t* data, size_t dataLen) = 0;
+		
 			/* Getters */
 			/* Returns a pointer to the raw binary data of the message. */
 			virtual const uint8_t* getBytes() const = 0;
+			/* Returns the size of the buffer in bytes. */
+			virtual size_t getBuffSize() const = 0;
 			/***********/
 
 #ifdef ARDUINO
@@ -96,17 +97,6 @@ namespace alib
 				/***********/
 			/**************************/
 
-			/* NOTE: All virtual functions must be defined here and not in the source file, weird
-			 * linker error is thrown otherwise. */
-			/* Virtual Functions */
-			void _copyBuff(const uint8_t* data) { _copyBuff(data, sizeof(_raw)); }
-			void _copyBuff(const uint8_t* data, size_t dataLen)
-			{
-				if (dataLen > sizeof(_raw))
-					dataLen = sizeof(_raw);
-				memcpy(_raw, data, dataLen);
-			}
-
 				/* Getters */
 			/* Gets the value at the given offset to the specified value.
 			*
@@ -159,8 +149,9 @@ namespace alib
 			/*********************/
 		public:		
 			/* Static Functions */
-			/* Returns the length of the message in bytes. */
-			static constexpr inline size_t getBuffSize(){ return(BUFF_SIZE); }
+			/* Returns the length of the message in bytes. 
+			 * Same as 'getBuffSize()' but nice to have when you need a static value. */
+			static constexpr inline size_t getBuffSizeStatic(){ return(BUFF_SIZE); }
 			/* Number of bytes actually used by the object.  This may be less than the total
 			 * size as some messages may want a common buffer size for expansion. */
 			static size_t getUtilizedSize(){ return(UTILIZED_SIZE); }
@@ -169,9 +160,22 @@ namespace alib
 			/********************/
 
 			/* Overridden Functions */
+			/* NOTE: All virtual functions must be defined here and not in the source file, weird
+			 * linker error is thrown otherwise. */
+			/* Virtual Functions */
+			void copyBuff(const uint8_t* data) { copyBuff(data, sizeof(_raw)); }
+			void copyBuff(const uint8_t* data, size_t dataLen)
+			{
+				if (dataLen > sizeof(_raw))
+					dataLen = sizeof(_raw);
+				memcpy(_raw, data, dataLen);
+			}
+			
 				/* Getters */
 			/* Returns a pointer to the raw binary data of the message. */
 			const uint8_t* getBytes() const { return(_raw); }
+			/* Returns the size of the buffer in bytes. */
+			size_t getBuffSize()const{return(getBuffSizeStatic());}
 				/***********/
 			/************************/
 		};

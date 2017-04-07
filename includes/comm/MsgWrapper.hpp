@@ -4,6 +4,12 @@
 /* NOTE:
 * THIS IS AN HPP FILE BECAUSE DEFINING VIRTUAL FUNCTIONS IN DIFFERENT FILE CAUSES LINKER ERRORS WITH TEMPLATED CLASSES.... */
 
+#ifndef NO_TEMPLATE_FUNCTIONS
+	#ifdef ARDUINO
+		#define NO_TEMPLATE_FUNCTIONS
+	#endif
+#endif
+
 namespace alib
 {
 	namespace comm
@@ -29,15 +35,14 @@ namespace alib
 			*
 			* Parameters:
 			*		offset: The offset, in bytes, at which to retrieve the value in the message buffer. */
-			template<typename T>
+			template<typename T> 
 			T _getDerivedOffset(size_t offset) const
-			{
-				
-#ifdef ARDUINO
+			{	
+			#ifdef NO_TEMPLATE_FUNCTIONS
 				return(*((T*)_getDerivedOffset(offset)));
-#else
+			#else
 				return(BASE::_getDerivedOffset<T>(offset + HEADER_SIZE));
-#endif
+			#endif
 			}
 			/* Gets the value at the given offset to the specified value.
 			 * Use the above functions unless you have a shitty compiler like the Arduino one which does not allow 
@@ -63,11 +68,11 @@ namespace alib
 			template<typename T>
 			void _setDerivedOffset(size_t offset, T value)
 			{
-				#ifdef ARDUINO
+			#ifdef NO_TEMPLATE_FUNCTIONS
 				_setDerivedOffset(offset, &value, sizeof(value));
-				#else
+			#else
 				BASE::_setDerivedOffset<T>(offset + HEADER_SIZE, value);
-				#endif
+			#endif
 			}
 			/* Sets the value at the given offset to the specified value.
 			 * Use the above functions unless you have a shitty compiler like the Arduino one which does not allow 
