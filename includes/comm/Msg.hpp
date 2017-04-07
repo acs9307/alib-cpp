@@ -5,6 +5,7 @@ extern "C"
 {
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 }
 
 /* NOTE:
@@ -104,16 +105,6 @@ namespace alib
 			*		offset: The offset, in bytes, at which to retrieve the value in the message buffer. */
 			template<typename T>
 			T _getDerivedOffset(size_t offset) const { return(*((T*)(_raw + offset))); }
-			/* Gets the value at the given offset to the specified value.
-			 * Use the above functions unless you have a shitty compiler like the Arduino one which does not allow 
-			 * 		recursive template calls...
-			 *
-			 * Parameters:
-			 *		offset: The offset, in bytes, at which to retrieve the value in the message buffer. */
-			const void* _getDerivedOffset(size_t offset)
-			{
-				return(_raw + offset);
-			}
 
 			/* Returns utilized size, but we want to use this for inheritance reasons. */
 			virtual size_t _getDerivedSize()const { return(UTILIZED_SIZE); }
@@ -129,21 +120,6 @@ namespace alib
 			void _setDerivedOffset(size_t offset, T value) 
 			{ 
 				*((T*)(_raw + offset)) = value;
-			}
-			/* Sets the value at the given offset to the specified value.
-			 * Use the above functions unless you have a shitty compiler like the Arduino one which does not allow 
-			 *  		recursive template calls...
-			 *
-			 * Parameters:
-			 *		offset: The offset, in bytes, at which to place the value in the message buffer.
-			 *		value: Pointer to the value to set at the given offset. 
-			 * 		valueSize: The size of the value in bytes. */
-			void _setDerivedOffset(size_t offset, void* value, size_t valueSize) 
-			{ 
-				uint8_t* valIt = (uint8_t*)value;
-				uint8_t* it = _raw + offset;
-				for(; valueSize; --valueSize, ++it, ++valIt)
-					*it = *valIt;
 			}
 				/***********/
 			/*********************/

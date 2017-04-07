@@ -4,12 +4,6 @@
 /* NOTE:
 * THIS IS AN HPP FILE BECAUSE DEFINING VIRTUAL FUNCTIONS IN DIFFERENT FILE CAUSES LINKER ERRORS WITH TEMPLATED CLASSES.... */
 
-#ifndef NO_TEMPLATE_FUNCTIONS
-	#ifdef ARDUINO
-		#define NO_TEMPLATE_FUNCTIONS
-	#endif
-#endif
-
 namespace alib
 {
 	namespace comm
@@ -25,7 +19,7 @@ namespace alib
 
 			/* Functions */
 				/* Getters */
-			static size_t _getHeaderSize() { return(HEADER_SIZE); }
+			static constexpr size_t _getHeaderSize() { return(HEADER_SIZE); }
 				/***********/
 			/*************/
 
@@ -38,21 +32,7 @@ namespace alib
 			template<typename T> 
 			T _getDerivedOffset(size_t offset) const
 			{	
-			#ifdef NO_TEMPLATE_FUNCTIONS
-				return(*((T*)_getDerivedOffset(offset)));
-			#else
-				return(BASE::_getDerivedOffset<T>(offset + HEADER_SIZE));
-			#endif
-			}
-			/* Gets the value at the given offset to the specified value.
-			 * Use the above functions unless you have a shitty compiler like the Arduino one which does not allow 
-			 * 		recursive template calls...
-			 *
-			 * Parameters:
-			 *		offset: The offset, in bytes, at which to retrieve the value in the message buffer. */
-			const void* _getDerivedOffset(size_t offset)
-			{
-				return(BASE::_getDerivedOffset(HEADER_SIZE + offset));
+				return(BASE::template _getDerivedOffset<T>(offset + HEADER_SIZE));
 			}
 
 			/* Returns the size specified as the derived size in the template of the object. */
@@ -68,24 +48,7 @@ namespace alib
 			template<typename T>
 			void _setDerivedOffset(size_t offset, T value)
 			{
-			#ifdef NO_TEMPLATE_FUNCTIONS
-				_setDerivedOffset(offset, &value, sizeof(value));
-			#else
-				BASE::_setDerivedOffset<T>(offset + HEADER_SIZE, value);
-			#endif
-			}
-			/* Sets the value at the given offset to the specified value.
-			 * Use the above functions unless you have a shitty compiler like the Arduino one which does not allow 
-			 *  		recursive template calls...
-			 *
-			 * Parameters:
-			 *		offset: The offset, in bytes, at which to place the value in the message buffer.
-			 *		value: Pointer to the value to set at the given offset. 
-			 * 		valueSize: The size of the value in bytes. */
-			void _setDerivedOffset(size_t offset, void* value, size_t valueSize) 
-			{ 
-				offset += HEADER_SIZE;
-				BASE::_setDerivedOffset(offset, value, valueSize);
+				BASE::template _setDerivedOffset<T>(offset + HEADER_SIZE, value);
 			}
 				/***********/
 			/*********************/
