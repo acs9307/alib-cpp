@@ -1,159 +1,281 @@
-#ifndef ALIB_CPP_COMM_MSG_IS_DEFINED
-#define ALIB_CPP_COMM_MSG_IS_DEFINED
+#ifndef ALIB_COMM_MSG_IS_DEFINED
+#define ALIB_COMM_MSG_IS_DEFINED
 
-extern "C"
-{
-#include <stdint.h>
-#include <stdio.h>
-#include <string.h>
-}
-
-/* NOTE:
- * THIS IS AN HPP FILE BECAUSE DEFINING VIRTUAL FUNCTIONS IN DIFFERENT FILE CAUSES LINKER ERRORS WITH TEMPLATED CLASSES.... */
+#ifdef ARDUINO
+#include <Arduino.h>
+#include <new.h>
+#else
+#include <iostream>
+#endif
 
 namespace alib
 {
 	namespace comm
 	{
-		/* Interface object for Msg objects.  This is needed because a template is required to specify a specific
-		* Msg object.  If we have an interface for the base class, then, even though templates are used, we can generalize
-		* objects.  Use this to generalize messages. */
-		class IMsg
-		{
-		public:
-			/* Due to MsgWrapper design, we can't utilize a constructor for 
-			 * this class, so any constructors building from binary arrays
-			 * should simply call this function. */
-			virtual void copyBuff(const uint8_t* data) = 0;
-			virtual void copyBuff(const uint8_t* data, size_t dataLen) = 0;
-		
-			/* Getters */
-			/* Returns a pointer to the raw binary data of the message. */
-			virtual const uint8_t* getBytes() const = 0;
-			/* Returns the size of the buffer in bytes. */
-			virtual size_t getBuffSize() const = 0;
-			/***********/
+		/* Generic list of constructors all inheriting objects should implement. 
+		 * Note that these are not required, but greatly simplify creation of most Msg objects. */
+#define ALIB_COMM_MSG_INHERITED_CONSTRUCTORS(DERIVED_CLASS, BASE_CLASS) \
+		DERIVED_CLASS(const Msg& msg, size_t buffSize = 0, bool referenceBuff = true) :BASE_CLASS(msg, buffSize, referenceBuff) {}
 
-#ifdef ARDUINO
-			/* Prints the data to a given stream in human readable format. */
-			virtual void print(Stream& stream) = 0;
-#endif
+		/* Generic list of constructors all inheriting objects should implement. 
+		 * Note that these are not required, but greatly simplify creation of most Msg objects.*/
+#define ALIB_COMM_MSG_INHERITED_CONSTRUCTORS_STATIC_SIZE(DERIVED_CLASS, BASE_CLASS) \
+		DERIVED_CLASS(const Msg& msg, bool referenceBuff = true) : BASE_CLASS(msg, referenceBuff) {}
 
-			/* Ensures that a Msg is actually valid.
-			* This is useful if the object is constructed from binary. */
-			virtual bool isValid()const = 0;
-			/*********************/
-		};
+		/* Set of functions that MUST BE IMPLEMENTED but should always be the same with each derivative. 
+		 * Note that implementing this MUST HAVE permissions scoping re-declared as it defines functions of 
+		 * multiple permission type. */
+#define ALIB_COMM_MSG_INHERITED_FUNCTIONS(DERIVED_CLASS, BASE_CLASS, UTILIZED_SIZE)\
+	protected:\
+		virtual size_t _getBaseSize()const{return(BASE_CLASS::getUtilizedSize());}\
+	public:\
+		virtual size_t getUtilizedSize()const{return(DERIVED_CLASS::_getBaseSize() + UTILIZED_SIZE);}
 
-		/* Object interface used for communication, specifically designed to be used with I2C, but can be
-		* used with any communication protocol/medium.
-		*
-		* The object is a wrapper for a simple binary buffer, therefore all data and members are stored
-		* inside this buffer.  All derived objects MUST implement getter and setter functions
-		* for each member related to the message and then store those values directly into the buffer.
-		* So long as the derived object's buffer size is the same or less than the original's object's
-		* buffer size, this can be cast to any derived Msg object.
-		*
-		* When implemented correctly, derived classes should never have to worry about the base class's
-		* placement and implementation, only on how the related portion of the message is implemented.
-		*
-		* Template Parameters:
-		*		UTILIZED_SIZE:	The number of bytes within the buffer that are actually used by the object.
-		*							This includes 
-		*		BUFF_SIZE:		The total number of bytes to allocate in the buffer for the message.
-		*						 This should be specified if you need a common message length so the
-		*						 requester knows how many bytes to except.
-		*/
-		template<size_t UTILIZED_SIZE, size_t BUFF_SIZE = UTILIZED_SIZE>
-		class Msg : public IMsg
+		/* Abstract class that simply wraps a buffer for communication. */
+		class Msg
 		{
 		private:
-			/* Ensure we are given valid values in the template. */
-			static_assert(UTILIZED_SIZE <= BUFF_SIZE, "UTILIZED_SIZE cannot exceed BUFF_SIZE!");
-
-			/* The entire packet that will be transmitted, all data is stored here and only
-			* linked to from getter and setter functions.
-			* Does this need to be volatile? */
-			uint8_t _raw[BUFF_SIZE];
+			void* _buff;
+			size_t _buffSize = 0;
+			bool _freeOnDestroy;
 
 		protected:
-			/* I'm calling these auto virtual functions because it automatically handles changes for derived classes without
-			 * explicitly being defined.  They should never be overridden and therefore are not an actual virtual 
-			 * type function. Auto Virtual Functions due to template class inheritance. */
-			/* Auto Virtual Functions */
-				/* Getters */
-			/* NOTE: We do not make '_getDerivedBuff()' virtual here as we should never need to modify the returned value.
-			* This works, even for base classes, as when the base class calls the function, it should call its
-			* base implementation '_getDerivedBuff()' which should not have the most derived class's DERIVED_SIZE. 
-			* I.E. 
-			*	template <DERIVED_SIZE>
-			*	class Base : Msg<DERIVED_SIZE + 1>;
-			*
-			*	class Derived : Base<1>;
-			*
-			**/
-			/* Getter for getting the related buffer for the message. */
-			uint8_t* _getDerivedBuff() { return((uint8_t*)_raw + UTILIZED_SIZE); }
-			const uint8_t* _getDerivedBuff() const { return((uint8_t*)_raw + UTILIZED_SIZE); }
-				/***********/
-			/**************************/
+			/* Functions */
+				/* Constructors */
+			/* Basically sets all values to empty, will not allocate memory.  This should be followed by a call to '_init()'. 
+			 * This is really useful whenever inheriting classes want to provide an interface for converting a buffer into a Msg object.
+			 * Originally it was desired to place such a function within Msg itself, however to do this would require Msg not be abstract... */
+			Msg() :_buff(NULL), _freeOnDestroy(false) {}
 
-				/* Getters */
-			/* Gets the value at the given offset to the specified value.
+			/* Constructs a Msg object and sets the internal buffer to point to the given one.  If 'buff' is NULL and 'buffSize' is not zero, then
+			 * the buffer will be dynamically created and its lifecycle will be handled by the object. */
+			Msg(void* buff, size_t buffSize = 0, bool own = false) { _init(buff, buffSize, own); }
+				/****************/
+
+				/* Virtual */
+					/* Getters */
+			virtual size_t _getBaseSize()const { return(0); }
+					/***********/
+				/***********/
+
+			/* Initializes a Msg object with the given buffer.  Should be used after calling the default constructor. 
 			*
 			* Parameters:
-			*		offset: The offset, in bytes, at which to retrieve the value in the message buffer. */
-			template<typename T>
-			T _getDerivedOffset(size_t offset) const { return(*((T*)(_raw + offset))); }
+			*		buff: The buff to either reference or copy.
+			*		buffSize: The length of 'buff' or the number of bytes to allocate.
+			*		own: If true, the Msg object will own the buffer and handle its lifecycle.
+			*/
+			void _init(void* buff, size_t buffSize = 0, bool own = false)
+			{
+				_buffSize = buffSize;
 
-			/* Returns utilized size, but we want to use this for inheritance reasons. */
-			virtual size_t _getDerivedSize()const { return(UTILIZED_SIZE); }
+				if (!buff)
+					own = true;
+				_freeOnDestroy = own;
+
+				if (buff)
+					_buff = buff;
+				else if (buffSize > 0)
+					_buff = new uint8_t[buffSize];
+				else
+					_buff = NULL;
+			}
+
+			/* Clears the derived buff up to count 'byteCount'. 
+			 * if 'byteCount' == 0, then the entire derived buff will be cleared. */
+			void _clearDerivedBuff(size_t baseSize, size_t byteCount = 0)
+			{
+				if (!byteCount)
+					byteCount = _buffSize - baseSize;
+
+				void* derBuff = _getDerivedBuff(baseSize);
+				memset(_getDerivedBuff(baseSize), 0, byteCount);
+			}
+
+				/* Getters */
+			/* Gets the buffer for the derived class (this is based off of the logical offset). */
+			void* _getDerivedBuff(size_t baseSize)
+			{
+				if (!_buff)return(NULL);
+
+				return(((uint8_t*)_buff) + baseSize);
+			}
+			/* Gets the buffer for the derived class (this is based off of the logical offset). */
+			const void* _getDerivedBuff(size_t baseSize)const
+			{
+				if (!_buff)return(NULL);
+
+				return(((uint8_t*)_buff) + baseSize);
+			}
+
+			/* Gets the offset of the derived buff and returns the requested type. 
+			 * 
+			 * Parameters:
+			 *		offset: The number of bytes to offset from the derived buffer.
+			 *		baseSize: Utilized size of the base class. */
+			template<typename T>
+			T _getDerivedOffset(size_t offset, size_t baseSize)
+			{
+				if (!_buff)return(T());
+
+				return(*((T*)((uint8_t*)_getDerivedBuff(baseSize) + offset)));
+			}
+			/* Gets the offset of the derived buff and returns the requested type.
+			*
+			* Parameters:
+			*		offset: The number of bytes to offset from the derived buffer.
+			*		baseSize: Utilized size of the base class. */
+			template<typename T>
+			const T _getDerivedOffset(size_t offset, size_t baseSize) const
+			{
+				if (!_buff)return(T());
+
+				return(*((T*)((uint8_t*)_getDerivedBuff(baseSize) + offset)));
+			}
 				/***********/
 
 				/* Setters */
-			/* Sets the value at the given offset to the specified value.
-			*
-			* Parameters:
-			*		offset: The offset, in bytes, at which to place the value in the message buffer.
-			*		value: The value to set at the given offset. */
+			/* Sets the value at the provided offset. */
 			template<typename T>
-			void _setDerivedOffset(size_t offset, T value) 
-			{ 
-				*((T*)(_raw + offset)) = value;
-			}
-				/***********/
-			/*********************/
-		public:		
-			/* Static Functions */
-			/* Returns the length of the message in bytes. 
-			 * Same as 'getBuffSize()' but nice to have when you need a static value. */
-			static constexpr inline size_t getBuffSizeStatic(){ return(BUFF_SIZE); }
-			/* Number of bytes actually used by the object.  This may be less than the total
-			 * size as some messages may want a common buffer size for expansion. */
-			static size_t getUtilizedSize(){ return(UTILIZED_SIZE); }
-			/* Returns the number of bytes that are unused. */
-			static size_t getRemainingSize() { return(BUFF_SIZE - UTILIZED_SIZE); }
-			/********************/
-
-			/* Overridden Functions */
-			/* NOTE: All virtual functions must be defined here and not in the source file, weird
-			 * linker error is thrown otherwise. */
-			/* Virtual Functions */
-			void copyBuff(const uint8_t* data) { copyBuff(data, sizeof(_raw)); }
-			void copyBuff(const uint8_t* data, size_t dataLen)
+			void _setDerivedOffset(size_t offset, size_t baseSize, T val)
 			{
-				if (dataLen > sizeof(_raw))
-					dataLen = sizeof(_raw);
-				memcpy(_raw, data, dataLen);
+				if (!_buff)return;
+
+				*((T*)(((uint8_t*)_getDerivedBuff(baseSize)) + offset)) = val;
 			}
-			
-				/* Getters */
-			/* Returns a pointer to the raw binary data of the message. */
-			const uint8_t* getBytes() const { return(_raw); }
-			/* Returns the size of the buffer in bytes. */
-			size_t getBuffSize()const{return(getBuffSizeStatic());}
 				/***********/
-			/************************/
+			/*************/
+
+		public:
+			/* Constructors */
+			/* Copy constructor.  
+			 * This will either create a shallow copy (referencing the same buffer), or 
+			 * create a deep copy (allocating a new buffer, and copying all of 'msg's buffer data into the new buffer).
+			 * 
+			 * Note: As with all Msg objects, using a referenced buffer means that the buffer must outlive the Msg object.
+			 * 
+			 * Parameters:
+			 *		msg: The message to copy.
+			 *		buffSize: The length of the buffer, in bytes. If 0, the buffer from 'msg' will be used.
+			 *		referenceBuff: If true, the internal buffer of 'msg' will be referenced and this object
+			 *						will not own it. */
+			Msg(const Msg& msg, size_t buffSize = 0, bool referenceBuff = true) { _init(((referenceBuff) ? msg._buff : NULL), (buffSize) ? buffSize : msg._buffSize); }
+			/****************/
+
+			/* Functions */
+				/* Virtual */
+					/* Getters */
+			/* Returns the number of bytes utilized by the message.  This differs from the actual buffer size.
+			 * i.e. buffer size >= utilized size */
+			virtual size_t getUtilizedSize()const { return(0); }
+			/* Ensures that a Msg is actually valid.
+			 * This is useful if the object is constructed from binary. */
+			virtual bool isValid()const = 0;
+					/***********/
+				/***********/
+
+			/* Copies a buffer into the given message. */
+			void copy(const void* data, size_t dataLen = 0)
+			{
+				if (!data)return;
+				if (dataLen == 0)
+					dataLen = getUtilizedSize();
+
+				memcpy(_buff, data, dataLen);
+			}
+			/* Copies the buffer of the given message. */
+			void copy(const Msg& msg) { copy(msg._buff, msg._buffSize); }
+
+			/* Attempts to take ownership of the internal buffer from the given Msg object.
+			 * This will only work if both messages are referencing the same buffer and the given 'msg' is 
+			 * the owner of the buffer.
+			 *
+			 * Returns:
+			 *		true: Ownership was taken.
+			 *		false: Ownership could not be taken, either due to the fact that 'msg' is not the buffer's owner
+			 *			   or that 'msg' and this object are not pointing to the same buffer. */
+			bool takeOwnership(Msg& msg)
+			{
+				if (msg._freeOnDestroy && msg._buff == _buff)
+				{
+					msg._freeOnDestroy = false;
+					_freeOnDestroy = true;
+					return(true);
+				}
+				else
+					return(false);
+			}
+
+				/* Getters */
+			/* Returns true if the object owns the buffer (will free on destruction). */
+			bool buffIsOwned()const { return(_freeOnDestroy); }
+			/* Returns the size of the buffer in bytes. 
+			 * 0 is returned when the buffer size was not specified. */
+			size_t getBuffSize()const { return(_buffSize); }
+			/* Gets a pointer to the internal buffer. */
+			const void* getBuff()const { return(_buff); }
+			/* Returns the number of bytes that are unutilized. */
+			size_t getRemainingSize()const { return(getBuffSize() - getUtilizedSize()); }
+				/***********/
+			/*************/
+
+			~Msg()
+			{
+				if (_freeOnDestroy && _buff)
+					delete[](_buff);
+			}
+		};
+
+		class MsgBuilder : public Msg
+		{
+		private:
+			MsgBuilder() {}
+		public:
+			/* Static */
+			/* Creates a Msg from the buffer.  This is used to build an Msg from a buffer and read it without
+			* any modification to the underlying data.  I.E. You have an array of data you received from a slave/client, and you
+			* wish to parse that data, simply call this function and pass the returned value to the copy constructor of the object
+			* you wish to cast to. */
+			static MsgBuilder fromBuff(void* buff, size_t buffSize = 0, bool own = false)
+			{
+				MsgBuilder msg{};
+				msg._init(buff, buffSize, own);
+
+				return(msg);
+			}
+			/**********/
+
+			/* Methods */
+				/* Virtual */
+			virtual bool isValid()const { return(true); }
+			virtual size_t getUtilizedSize()const { return(0); }
+				/***********/
+			/***********/
+		};
+
+		template<size_t BUFF_SIZE>
+		class MsgStaticSized : public Msg
+		{
+		protected:
+			MsgStaticSized() : Msg() {}
+			MsgStaticSized(void* buff, bool own = false) : Msg(buff, BUFF_SIZE, own) {}
+
+		public:			
+			MsgStaticSized(const Msg& msg, bool referenceBuff = true) : Msg(msg, BUFF_SIZE, referenceBuff){}
+
+			/* Getters */
+			static constexpr size_t getBuffSize() { return(BUFF_SIZE); }
+			/***********/
+
+			/* Virtual */
+				/* Getters */
+			virtual bool isValid()const 
+			{ 
+				uint8_t buffSize = (uint8_t)Msg::getBuffSize();
+				return(!buffSize || buffSize == BUFF_SIZE); 
+			}
+				/***********/
+			/***********/
 		};
 	}
 }

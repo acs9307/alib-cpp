@@ -1,3 +1,20 @@
+---Version 1.1.1---
+Added a few helper headers.
+Modified the Msg protocol.  Hopefully will now be more straight forward to use.
+Removed MsgWrapper as it was no longer needed.
+
+enum:
+	NEW!
+
+flags:
+	NEW!
+
+memory:
+	NEW!
+
+comm/MsgWrapper:
+	REMOVED!
+
 ---Version 1.1.0---
 comm/Msg:
 	NEW!	
