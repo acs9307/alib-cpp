@@ -179,7 +179,7 @@ namespace alib
 			{
 				if (!data)return;
 				if (dataLen == 0)
-					dataLen = getUtilizedSize();
+					dataLen = getBuffSize();
 
 				memcpy(_buff, data, dataLen);
 			}
