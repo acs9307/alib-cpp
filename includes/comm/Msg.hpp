@@ -214,6 +214,9 @@ namespace alib
 			size_t getBuffSize()const { return(_buffSize); }
 			/* Gets a pointer to the internal buffer. */
 			const void* getBuff()const { return(_buff); }
+			/* Same as 'getBuff()' but gets a writable buffer.  This should be used to write directly to the buffer.
+			 * BE VERY CAREFUL WITH THIS, and DEFFINATELY NEVER FREE the returned buffer. */
+			void* getWritableBuff()const{return(_buff);}
 			/* Returns the number of bytes that are unutilized. */
 			size_t getRemainingSize()const { return(getBuffSize() - getUtilizedSize()); }
 				/***********/
