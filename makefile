@@ -26,6 +26,8 @@ all:
 	make install
 
 arduino:
+	cp ./Arduino_alib-cpp.h ../
+	cp ./Arduino_alib-cpp-comm.h ../
 	cp source/JsonStreamWriter.cpp .
 	cp source/ReferenceCounter.cpp .
 	cp source/ScrollingBuffer.cpp .

@@ -225,7 +225,7 @@ namespace alib
 			~Msg()
 			{
 				if (_freeOnDestroy && _buff)
-					delete[](_buff);
+					delete[]((uint8_t*)_buff);
 			}
 		};
 

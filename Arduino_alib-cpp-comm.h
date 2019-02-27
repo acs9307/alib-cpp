@@ -1,5 +1,5 @@
-#ifndef ARDUINO_ALIB-C_IS_DEFINED
-#define ARDUINO_ALIB-C_IS_DEFINED
+#ifndef ARDUINO_ALIB-C_IS_DEFINED 
+#define ARDUINO_ALIB-C_IS_DEFINED 
 
 #include <Arduino.h>
 
