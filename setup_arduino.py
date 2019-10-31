@@ -12,13 +12,16 @@ def linkFile(filename, toFilename=None):
     """
     if(toFilename == None):
         toFilename = filename;
-    toFilename = os.path.basename(toFilename);
+    toFilename = os.path.join(SCRIPT_DIR, "..", os.path.basename(toFilename));
+    # Remove the file if it is a directory, otherwise instead of replacing the file, the link will be placed within the directory.
+    if(os.path.isdir(filename) and os.path.exists(toFilename)):
+        os.remove(toFilename);
+
     filename = os.path.join(os.path.basename(os.path.abspath(SCRIPT_DIR)), filename);    # Have to add the project name in front in order for this to work.
 
     print("Creating file '%s' linking to '%s'."%(toFilename, filename));
 
-    shellCmd = ["ln", "-sf", filename];
-    shellCmd.append(os.path.join(SCRIPT_DIR, "..", toFilename));
+    shellCmd = ["ln", "-sf", filename, toFilename];
     subprocess.run(shellCmd);
 
 # Copy single include headers.
