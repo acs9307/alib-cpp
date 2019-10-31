@@ -25,18 +25,11 @@ all:
 	make alibcpp
 	make install
 
-arduino:
-	cp ./Arduino_alib-cpp.h ../
-	cp ./Arduino_alib-cpp-comm.h ../
-	cp source/JsonStreamWriter.cpp .
-	cp source/ReferenceCounter.cpp .
-	cp source/ScrollingBuffer.cpp .
-	cp source/Task.cpp .
-	cp source/TaskPool.cpp .
-	cp source/Timer.cpp .
-	cp source/comm/RF24TP.cpp comm-RF24TP.cpp
-	cp source/comm/RF24TPPacket.cpp comm-RF24TPPacket.cpp
-	cp source/sensor/USRange.cpp sensor-USRange.cpp
-
 clean:
 	rm -rf *.o *.cpp *.a comm/ sensor/
+
+arduino:
+	./setup_arduino.py
+
+clean-arduino:
+	rm ../*.h ../*.cpp ../includes
